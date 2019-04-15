@@ -5,7 +5,7 @@ output: html_notebook
 ---
 
 1. Reference gpa-script.py to understand where DataFrame is coming in. Will use reticulate to read in a pickled file
-
+2- R_DA, CW_DA, 
 ```{r}
 #Packages
 
@@ -15,6 +15,7 @@ library(mosaic)
 library(reticulate)
 library(data.table)
 
+#TODO: MAKE LARGE DF WITH AL DEGREE AUDITS 
 #read in data
 setwd("Documents/GitHub/Stat380/GPA_Predictor/")
 results <- read.csv("results.csv", header = TRUE)
@@ -41,11 +42,12 @@ cat("Percent of STEM Classes taken:",pert_stem,"%\n")
 #Find Pass Fail Ratio (Really its B- And Above)
 r = nrow(result)
 pert_pass <- round(sum(result$Grade == 1) / n ,4) *100 
-cat("You have passed:",pert_pass,"% of you classes\n")
+cat("You have have received a B- or higher in:",pert_pass,"% of you classes\n")
 
+df1 <- as.data.frame(result)
 
-
-
+#two dfs together 
+total <- rbind.data.frame(df1, results)
 ```
 
 
