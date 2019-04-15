@@ -5,7 +5,8 @@ output: html_notebook
 ---
 
 1. Reference gpa-script.py to understand where DataFrame is coming in. Will use reticulate to read in a pickled file
-2- R_DA, CW_DA, 
+2- R, C, H, A
+#Create CSV
 ```{r}
 #Packages
 
@@ -24,6 +25,12 @@ results <- read.csv("results.csv", header = TRUE)
 setnames(results, old=c("X0","X1","X2","X3","X4","X5","X6"), new=c("Term","Subject", "Catalog Nbr","Course Title","Grade"," Units","Type"))
 
 results <- results[-1,]
+
+df1 <- as.data.frame(results)
+
+#two dfs together 
+total <- rbind.data.frame(total, df1)
+
 ```
 
 
@@ -32,7 +39,7 @@ results <- results[-1,]
 #Stem Classes Receive a 1 and Non Stem receive a 0
 result <- results %>%
   mutate(Grade = ifelse( Grade == "B-" | Grade == "B" | Grade == "B+" | Grade == "A-" | Grade == "A", 1,0)) %>%
-  mutate(Subject = ifelse(Subject == "CHEM" | Subject == "MATH"|Subject == "STAT" | Subject == "MICRB" | Subject == "BIOL" | Subject == "ASTRO", 1,0))
+  mutate(Subject = ifelse(Subject == "CHEM" | Subject == "MATH"|Subject == "STAT" | Subject == "MICRB" | Subject == "BIOL" | Subject == "ASTRO" | Subject == "CMPSC" | Subject == "DS", 1,0))
 
 #Find Proportion of stem classes 
 n = nrow(result)
@@ -44,10 +51,7 @@ r = nrow(result)
 pert_pass <- round(sum(result$Grade == 1) / n ,4) *100 
 cat("You have have received a B- or higher in:",pert_pass,"% of you classes\n")
 
-df1 <- as.data.frame(result)
 
-#two dfs together 
-total <- rbind.data.frame(df1, results)
 ```
 
 
