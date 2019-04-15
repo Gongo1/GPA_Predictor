@@ -1,0 +1,24 @@
+---
+title: "GPA Predictor"
+author: "Austin Gongora"
+output: html_notebook
+---
+
+1. Reference gpa-script.py to understand where DataFrame is coming in. Will use reticulate to read in a pickled file
+
+```{r}
+#Packages
+
+library(dplyr)
+library(tidyverse)
+library(mosaic)
+library(reticulate)
+
+#read in data
+setwd("Documents/GitHub/Stat380/GPA_Predictor/")
+results <- read.csv("result.csv", header = FALSE)
+colnames(results) <- as.character(unlist(results[1,]))
+results= results[-1, ]
+
+
+```
