@@ -13,12 +13,42 @@ library(dplyr)
 library(tidyverse)
 library(mosaic)
 library(reticulate)
+library(data.table)
 
 #read in data
 setwd("Documents/GitHub/Stat380/GPA_Predictor/")
-results <- read.csv("result.csv", header = FALSE)
-colnames(results) <- as.character(unlist(results[1,]))
-results= results[-1, ]
+results <- read.csv("results.csv", header = TRUE)
+
+#Rename Columns 
+setnames(results, old=c("X0","X1","X2","X3","X4","X5","X6"), new=c("Term","Subject", "Catalog Nbr","Course Title","Grade"," Units","Type"))
+
+results <- results[-1,]
+```
+
+
+```{r}
+#Going to take only B- or higher... If B- or higher we assign it a 1 else its a 0
+#Stem Classes Receive a 1 and Non Stem receive a 0
+result <- results %>%
+  mutate(Grade = ifelse( Grade == "B-" | Grade == "B" | Grade == "B+" | Grade == "A-" | Grade == "A", 1,0)) %>%
+  mutate(Subject = ifelse(Subject == "CHEM" | Subject == "MATH"|Subject == "STAT" | Subject == "MICRB" | Subject == "BIOL" | Subject == "ASTRO", 1,0))
+
+#Find Proportion of stem classes 
+n = nrow(result)
+pert_stem <- round(sum(result$Subject == 1) / n ,4) *100 
+cat("Percent of STEM Classes taken:",pert_stem,"%\n")
+
+#Find Pass Fail Ratio (Really its B- And Above)
+r = nrow(result)
+pert_pass <- round(sum(result$Grade == 1) / n ,4) *100 
+cat("You have passed:",pert_pass,"% of you classes\n")
+
+
 
 
 ```
+
+
+
+
+
