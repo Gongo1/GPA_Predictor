@@ -5,7 +5,6 @@ output: html_notebook
 ---
 
 1. Reference gpa-script.py to understand where DataFrame is coming in. Will use reticulate to read in a pickled file
-2- R, C, H, A
 #Create CSV
 ```{r}
 #Packages
@@ -31,7 +30,43 @@ df1 <- as.data.frame(results)
 #two dfs together 
 total <- rbind.data.frame(total, df1)
 
+#write.csv(total, file = "total.csv")
 ```
+
+#CU BOULDER DATA- ENGR
+After downloading their data they turned the data services off 
+```{r}
+STEM<- read.table("gpa_data.txt", sep = "\t", nrows = 65536, header = TRUE)
+
+Non_STEM <- read.table("TryThis.txt",sep = "\t", header = TRUE, nrows = 101634)
+
+ENGR <- STEM %>%
+  select(Class.Level, College.Division, Cumulative.GPA..Major., Major)
+
+#Stem ==1 
+ENGR1 <- ENGR %>%
+  mutate(Major = ifelse(Major != "NA", 1 ,0))
+
+#Below 2.67 is a 0 (B-)
+ENGR2 <- ENGR1%>%
+  mutate(Cumulative.GPA..Major. = ifelse(Cumulative.GPA..Major. >= 2.67, 1,0))
+
+
+Not_Stem <- Non_STEM %>%
+  select(Class.Level, College.Division, Cumulative.GPA..Major., Major)
+
+NoStem <- Not_Stem %>%
+  mutate(Major = ifelse(Major != "NA", 0 ,1)) %>%
+
+#Below 2.67 is a 0 (B-)
+NOTSTEM <- NoStem %>%
+  mutate(Cumulative.GPA..Major. = ifelse(Cumulative.GPA..Major. >= 2.67, 1,0))
+
+Total_CU <- rbind.data.frame(NOTSTEM, ENGR2)
+
+```
+
+
 
 
 ```{r}
