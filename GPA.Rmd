@@ -14,6 +14,9 @@ library(tidyverse)
 library(mosaic)
 library(reticulate)
 library(data.table)
+library(ggplot2)
+library(DAAG)
+library(bootstrap)
 
 #TODO: MAKE LARGE DF WITH AL DEGREE AUDITS 
 #read in data
@@ -38,8 +41,92 @@ After downloading their data they turned the data services off
 ```{r}
 STEM<- read.table("gpa_data.txt", sep = "\t", nrows = 65536, header = TRUE)
 
-Non_STEM <- read.table("TryThis.txt",sep = "\t", header = TRUE, nrows = 101634)
+#Stem ==1 
+STEM <- STEM %>%
+  mutate(Major = ifelse(Major != "NA", 1 ,0))
 
+
+
+Non_STEM <- read.table("TryThis.txt",sep = "\t", header = TRUE, nrows = 101634)
+#Non-Stem = 0
+Non_STEM <- Non_STEM %>%
+  mutate(Major = ifelse(Major != "NA", 0 ,1)) 
+
+
+  
+#Use all features to predict GPA???? 
+All_Degree <- rbind.data.frame(STEM, Non_STEM)
+```
+
+#Linear Regression 
+```{r}
+summary(All_Degree)
+#Cleam UP DF
+x <- c(1,4,11,13,14,15)
+#All_Degree1 = All_Degree[,-x]
+
+#M = 1 & F =0
+#Resident = 1 | Non = 0
+#First Gen = 1 
+#Fall = 1
+#Fresh = 1 | Soph =4 | Jr = 2 | Sr. = 3
+#International = 1 | URM = 2 | White/Other = 3
+All_Degree1<- All_Degree1 %>%
+  mutate(Gender = ifelse(Gender == "Male",1,0)) %>%
+  mutate(Residency = ifelse(Residency == "Resident",1,0)) %>%
+  mutate(FirstGen = ifelse(FirstGen == "First Gen",1,0)) %>%
+  mutate(FallSpring = ifelse(FallSpring == "Fall",1,0)) %>%
+  mutate(Class.Level = as.numeric(All_Degree$Class.Level)) %>%
+  mutate(Ethnicity = as.numeric(All_Degree$Ethnicity))
+
+
+
+set.seed(7736)
+len <- nrow(All_Degree)
+testindices <- sample(len, round(len/4))
+train_data <- All_Degree1[-testindices,]
+test_data <- All_Degree1[testindices,]
+
+#I need more features
+model1 = lm(log(train_data$Cumulative.GPA..Major.) ~ train_data$Class.Level +  train_data$Ethnicity + train_data$FallSpring + train_data$FirstGen + train_data$Gender + train_data$Major + train_data$Residency, data = train_data)
+
+#All Features are Significant with an alpha at 0.05... With an alpha at 0.01 all except Fall/Spring
+models1 = summary(model1)
+
+#Find Predicted Values
+train_data$pred <- predict(model1)   
+train_data$resid <- residuals(model1)
+
+#Look at actual, predicted, and residual values
+train_data %>% select(Cumulative.GPA..Major., pred, resid) %>% head()
+
+#plot multiple predictors
+#Don't inlcude respnse or predicted & residual values 
+
+#Predicted Vs Residuals 
+
+
+plot(train_data$pred,train_data$Cumulative.GPA..Major.,
+      xlab="predicted",ylab="actual")
+ abline(a=0,b=1)
+
+
+
+
+par(mfrow = c(2, 2))  # Split the plotting panel into a 2 x 2 grid
+plot(model1) 
+
+
+plot(fitted(model1), abs(residuals(model1)), xlab="Fitted", ylab="|Residuals|")
+
+```
+
+
+
+
+
+
+```{r}
 ENGR <- STEM %>%
   select(Class.Level, College.Division, Cumulative.GPA..Major., Major)
 
@@ -62,6 +149,7 @@ NoStem <- Not_Stem %>%
 NOTSTEM <- NoStem %>%
   mutate(Cumulative.GPA..Major. = ifelse(Cumulative.GPA..Major. >= 2.67, 1,0))
 
+#Final DF W/ Stem and NON Stem 
 Total_CU <- rbind.data.frame(NOTSTEM, ENGR2)
 
 ```

@@ -1,0 +1,212 @@
+---
+title: "New_Trial"
+output: html_notebook
+---
+
+```{r}
+#Packages
+
+library(dplyr)
+library(tidyverse)
+library(mosaic)
+library(reticulate)
+library(data.table)
+library(ggplot2)
+library(DAAG)
+library(bootstrap)
+library(rpart)
+library(Metrics)
+library(readr)
+library(memisc)
+library(plotly)
+#data
+
+kaggle <- read.csv("kaggle_edu.csv", header = TRUE)
+```
+Grades are separated from Low(0-69) Middle (70,89) and High (90-100)
+
+```{r}
+#Raising Hands 
+#Are student using their resources provided??? And how does it affect their grades????
+#Are student that use resources often times better prepared
+summary(kaggle)
+kaggle %>% 
+  count(raisedhands) %>% 
+  ggplot(aes(raisedhands, n)) +
+  geom_line()
+
+#Students and Raised Hands 
+ggplot(data = kaggle, aes(x = raisedhands)) + geom_histogram(color = "black") +
+  scale_x_continuous(breaks = seq(0,100,5)) + 
+  labs(x = "Raised Hands", y = "Student Count")
+ 
+
+ggplot(data = kaggle, aes(x = gender)) + geom_bar() + 
+  labs(x = "Gender", y = "Student Count") +
+  scale_y_continuous(breaks = seq(0,300,30)) + coord_flip() 
+
+ggplot(data = kaggle, aes(x = PlaceofBirth)) + geom_bar(aes(fill = NationalITy)) + 
+  labs(x = "Birth Place", y = "Student Count") + coord_flip()
+
+ 
+#box plot 
+ggplot(data = kaggle, aes(x = gender, y = raisedhands)) + geom_boxplot()
+
+#Interesting 
+ggplot(data = kaggle, aes(x = Class, y = raisedhands)) + geom_boxplot()
+
+ggplot(data = kaggle, aes(x = Relation, y = raisedhands)) + geom_boxplot()
+
+ggplot(data = kaggle, aes(x = PlaceofBirth, y = raisedhands)) + geom_boxplot()
+
+ggplot(data = kaggle, aes(x = StudentAbsenceDays, y = raisedhands)) + geom_boxplot()
+
+ggplot(data = kaggle, aes(x = ParentschoolSatisfaction, y = raisedhands)) + geom_boxplot()
+
+#creating scatter plot
+ggplot(data = kaggle, aes( x = raisedhands, y = VisITedResources)) + geom_point() +
+  geom_smooth(method = "lm")
+ 
+#density plots
+ggplot(data = kaggle, aes(x = raisedhands, color = Topic)) + geom_density()
+
+#This one is interesting 
+ggplot(data = kaggle, aes(x = raisedhands, color = Class)) + geom_density()
+
+#Interesting
+ggplot(data = kaggle, aes(x = Class, color = Relation)) + geom_density()
+
+ggplot(data = kaggle, aes(x = Class, color = StudentAbsenceDays)) + geom_density()
+```
+
+```{r}
+#Simple Linear Regression 
+#Middle = 3 | Low = 2 | High = 1 
+kaggle1 <- kaggle %>%
+  mutate(Class = as.numeric(kaggle$Class))
+
+model <- lm(VisITedResources ~ raisedhands, data = kaggle1)
+model1 = summary(model)
+
+kaggle1$predicted <- predict(model)   # Save the predicted values
+kaggle1$residuals <- residuals(model)
+
+kaggle1 %>% select(VisITedResources, predicted, residuals) %>% head()
+
+ggplot(kaggle1, aes(x = raisedhands, y = VisITedResources)) +  
+  geom_point()
+
+
+#Connecting actaul data points with pred values
+ggplot(kaggle1, aes(x = raisedhands, y = VisITedResources)) +
+  geom_segment(aes(xend = raisedhands, yend = predicted)) +
+  geom_point() +
+  geom_point(aes(y = predicted), shape = 1)
+
+#Clean up 
+ggplot(kaggle1, aes(x = raisedhands, y = VisITedResources))  +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +  # Plot regression slope
+  geom_segment(aes(xend = raisedhands, yend = predicted), alpha = .2) +  # alpha to fade lines
+  geom_point() +
+  geom_point(aes(y = predicted), shape = 1) +
+  theme_bw() 
+
+#Use residuals to adjust 
+ggplot(kaggle1, aes(x = raisedhands, y = VisITedResources))+
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +
+  geom_segment(aes(xend = raisedhands, yend = predicted), alpha = .2) +
+
+  # > Alpha adjustments made here...
+  geom_point(aes(alpha = abs(residuals))) +  # Alpha mapped to abs(residuals)
+  guides(alpha = FALSE) +  # Alpha legend removed
+  # <
+
+  geom_point(aes(y = predicted), shape = 1) +
+  theme_bw()
+
+
+# COLOR
+# High residuals (in abolsute terms) made more red on actual values.
+ggplot(kaggle1, aes(x = raisedhands, y = VisITedResources)) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +
+  geom_segment(aes(xend = raisedhands, yend = predicted), alpha = .2) +
+
+  # > Color adjustments made here...
+  geom_point(aes(color = abs(residuals))) + # Color mapped to abs(residuals)
+  scale_color_continuous(low = "black", high = "red") +  # Colors to use here
+  guides(color = FALSE) +  # Color legend removed
+  # <
+
+  geom_point(aes(y = predicted), shape = 1) +
+  theme_bw()
+
+
+ggplot(kaggle1, aes(x = raisedhands, y = VisITedResources)) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +
+  geom_segment(aes(xend = raisedhands, yend = predicted), alpha = .2) +
+
+  # > Color AND size adjustments made here...
+  geom_point(aes(color = abs(residuals), size = abs(residuals))) + # size also mapped
+  scale_color_continuous(low = "black", high = "red") +
+  guides(color = FALSE, size = FALSE) +  # Size legend also removed
+  # <
+
+  geom_point(aes(y = predicted), shape = 1) +
+  theme_bw()
+```
+
+```{r}
+#Multiple Linear Regression
+d <- kaggle1 %>%
+  select(VisITedResources, raisedhands, Class, PlaceofBirth, StudentAbsenceDays, Topic)
+
+fit <- lm(d$VisITedResources ~  d$raisedhands + d$Class + d$PlaceofBirth + d$StudentAbsenceDays + d$Topic)
+summary(fit)
+
+d$predicted <- predict(fit)
+d$residuals <- residuals(fit)
+
+
+d %>% 
+  gather(key = "iv", value = "x", -VisITedResources, -predicted, -residuals) %>%  # Get data into shape
+  ggplot(aes(x = x, y = VisITedResources)) +  # Note use of `x` here and next line
+  geom_segment(aes(xend = x, yend = predicted), alpha = .2) +
+  geom_point(aes(color = residuals)) +
+  scale_color_gradient2(low = "blue", mid = "white", high = "red") +
+  guides(color = FALSE) +
+  geom_point(aes(y = predicted), shape = 1) +
+  facet_grid(~ iv, scales = "free_x") +  # Split panels here by `iv`
+  theme_bw()
+```
+
+
+```{r}
+#Logisitc Regression 
+#0 = fail | 1 = pass
+d <- kaggle1 %>%
+  mutate(Class = ifelse(Class == 2 ,0,1))
+
+fit <- glm(d$Class ~  d$VisITedResources + d$raisedhands + d$StudentAbsenceDays , family = binomial())
+
+# Step 2: Obtain predicted and residuals
+d$predicted <- predict(fit, type="response")
+d$residuals <- residuals(fit, type = "response")
+
+# Steps 3 and 4: plot the results
+ggplot(d, aes(x = raisedhands, y = Class)) +
+  geom_segment(aes(xend = raisedhands, yend = predicted), alpha = .2) +
+  geom_point(aes(color = residuals)) +
+  scale_color_gradient2(low = "blue", mid = "white", high = "red") +
+  guides(color = FALSE) +
+  geom_point(aes(y = predicted), shape = 1) +
+  theme_bw()
+
+
+
+
+```
+
+
+
+
+
