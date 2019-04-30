@@ -213,10 +213,10 @@ fit <- lm(kaggle$VisITedResources ~  kaggle$raisedhands + kaggle$Class + kaggle$
 
 confint(fit)
 
-qqPlot(fit, main="QQ Plot")
 
 #normality check 
 ad.test(fit$residuals)
+qqPlot(fit, main = "QQ Plot")
 
 #constant variance 
 plot(kaggle$fitted,kaggle$residuals, ylab="Residuals", xlab="Fitted Values")
@@ -261,6 +261,7 @@ ggplot(d, aes(x = raisedhands, y = Class)) +
 
 
 ```
+
 
 
 
