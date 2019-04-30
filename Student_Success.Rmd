@@ -226,6 +226,14 @@ bptest(fit)
 #linearity 
 rcorr(as.matrix(numkaggle))
 
+#independence 
+plot(numkaggle$residuals, main="Residuals vs Order")
+acf(kaggle$residuals)
+dwtest(kaggle)
+
+#collinearity 
+vif(fit)
+
 ```
 
 ```{r}
