@@ -180,6 +180,24 @@ d %>%
   theme_bw()
 ```
 
+
+```{r}
+# data wrangling 
+
+
+kaggle1 <- kaggle %>%
+mutate(Relation = as.numeric(kaggle$Relation)) %>%
+mutate(PlaceofBirth = as.numeric(kaggle$PlaceofBirth)) %>%
+mutate(Topic = as.numeric(kaggle$Topic)) %>% 
+mutate(gender = as.numeric(kaggle$gender)) %>%
+mutate(StudentAbsenceDays = as.numeric(kaggle$StudentAbsenceDays)) 
+
+numkaggle <- kaggle1 %>%
+  dplyr::select(VisITedResources, Relation, PlaceofBirth, Topic, gender, StudentAbsenceDays)
+
+numkaggle = RF_df.norm
+```
+
 ```{r}
 #multpile linear regression 
 
@@ -197,12 +215,16 @@ confint(fit)
 
 qqPlot(fit, main="QQ Plot")
 
+#normality check 
 ad.test(fit$residuals)
 
+#constant variance 
 plot(kaggle$fitted,kaggle$residuals, ylab="Residuals", xlab="Fitted Values")
 abline(0,0)
 bptest(fit)
 
+#linearity 
+rcorr(as.matrix(numkaggle))
 
 ```
 
