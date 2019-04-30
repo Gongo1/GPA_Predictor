@@ -1,12 +1,12 @@
 ---
 title: "New_Trial"
 output: html_notebook
-author: "Payton Kegel"
 ---
-
-```{r}
+# Front matter
+```{r, echo=FALSE}
 #Packages
-
+# always clean up R environment
+rm(list = ls())
 library(dplyr)
 library(tidyverse)
 library(mosaic)
@@ -20,10 +20,24 @@ library(Metrics)
 library(readr)
 library(memisc)
 library(plotly)
-#data
+library(neuralnet)
+library(randomForest)
+library(VIM)
+library(pvclust)
+library(mclust)
+library(cluster)
 
+#data
 kaggle <- read.csv("kaggle_edu.csv", header = TRUE)
 ```
+
+Kaggle Data Set Contains 17 Features
+```{r}
+names(kaggle)
+```
+
+The overarching goal is to quantify a students success based on their participation in school. We define success based on a studetns ability to have High Parent School Satisfaction Rates & Receiving Medium-High Grades. We define participation as: Accessing School Resources, Participating in Class (Raising Hands & Answering Questions) and Not Being Absent too many times. 
+
 Grades are separated from Low(0-69) Middle (70,89) and High (90-100)
 
 ```{r}
@@ -31,57 +45,54 @@ Grades are separated from Low(0-69) Middle (70,89) and High (90-100)
 #Are student using their resources provided??? And how does it affect their grades????
 #Are student that use resources often times better prepared
 summary(kaggle)
-kaggle %>% 
-  count(raisedhands) %>% 
-  ggplot(aes(raisedhands, n)) +
-  geom_line()
 
 #Students and Raised Hands 
 ggplot(data = kaggle, aes(x = raisedhands)) + geom_histogram(color = "black") +
   scale_x_continuous(breaks = seq(0,100,5)) + 
   labs(x = "Raised Hands", y = "Student Count")
- 
 
-ggplot(data = kaggle, aes(x = gender)) + geom_bar() + 
-  labs(x = "Gender", y = "Student Count") +
-  scale_y_continuous(breaks = seq(0,300,30)) + coord_flip() 
-
+#Raising Hands By Nationality 
 ggplot(data = kaggle, aes(x = PlaceofBirth)) + geom_bar(aes(fill = NationalITy)) + 
   labs(x = "Birth Place", y = "Student Count") + coord_flip()
 
  
 #box plot 
+#Comparre Raising Hands with Gender
 ggplot(data = kaggle, aes(x = gender, y = raisedhands)) + geom_boxplot()
-
+#Resources With Gender
+ggplot(data = kaggle, aes(x = gender, y = VisITedResources)) + geom_boxplot()
 #Interesting 
+#Higher Grades Associated with Students that raise hands more
 ggplot(data = kaggle, aes(x = Class, y = raisedhands)) + geom_boxplot()
-
+#Higher Grades Associated with Students that visit more resources
+ggplot(data = kaggle, aes(x = Class, y = VisITedResources)) + geom_boxplot()
+#With mum as the relation more students paticipate
 ggplot(data = kaggle, aes(x = Relation, y = raisedhands)) + geom_boxplot()
-
-ggplot(data = kaggle, aes(x = PlaceofBirth, y = raisedhands)) + geom_boxplot()
-
-ggplot(data = kaggle, aes(x = StudentAbsenceDays, y = raisedhands)) + geom_boxplot()
-
+#Students with better satisfaction raise their hands mroe
 ggplot(data = kaggle, aes(x = ParentschoolSatisfaction, y = raisedhands)) + geom_boxplot()
+#Students with better satisfaction use more resources
+ggplot(data = kaggle, aes(x = ParentschoolSatisfaction, y = VisITedResources)) + geom_boxplot()
 
-#creating scatter plot
-ggplot(data = kaggle, aes( x = raisedhands, y = VisITedResources)) + geom_point() +
-  geom_smooth(method = "lm")
- 
+
 #density plots
+#Raising Hands Based on Topic
 ggplot(data = kaggle, aes(x = raisedhands, color = Topic)) + geom_density()
 
-#This one is interesting 
+#Higher Grades more Raising Hands
 ggplot(data = kaggle, aes(x = raisedhands, color = Class)) + geom_density()
 
 #Interesting
-ggplot(data = kaggle, aes(x = Class, color = Relation)) + geom_density()
+#Higher grade visited more resources 
+ggplot(data = kaggle, aes(x = VisITedResources, color = Class)) + geom_density()
 
-ggplot(data = kaggle, aes(x = Class, color = StudentAbsenceDays)) + geom_density()
+ggplot(data = kaggle, aes(x = VisITedResources, color = ParentschoolSatisfaction)) + geom_density()
+
 ```
 
+
 ```{r}
-#Simple Linear Regression 
+#Simple Linear Regression
+#Statistical Modeling 
 #Middle = 3 | Low = 2 | High = 1 
 kaggle1 <- kaggle %>%
   mutate(Class = as.numeric(kaggle$Class))
@@ -159,15 +170,25 @@ ggplot(kaggle1, aes(x = raisedhands, y = VisITedResources)) +
 ```{r}
 #Multiple Linear Regression
 d <- kaggle1 %>%
-  select(VisITedResources, raisedhands, Class, PlaceofBirth, StudentAbsenceDays, Topic)
+  select(VisITedResources, raisedhands, Class, PlaceofBirth, StudentAbsenceDays, Topic, Relation, gender)
 
-fit <- lm(d$VisITedResources ~  d$raisedhands + d$Class + d$PlaceofBirth + d$StudentAbsenceDays + d$Topic)
+fit <- lm(d$VisITedResources ~  ., data = d)
 summary(fit)
-
+#R-Squared is 57.9%
 d$predicted <- predict(fit)
 d$residuals <- residuals(fit)
 
+#Significant Values: Raised Hands, Place of Birth- Libya, Absent Days under 7, French Topic, French & MAth, Gender, RelationMum 
 
+#Comparing Actual Vs predicted....
+plot(predict(fit),d$VisITedResources,
+      xlab="predicted",ylab="actual")
+abline(a=0,b=1)
+
+par(mfrow = c(2, 2))
+plot(fit)
+
+#Use of of Gather Key 
 d %>% 
   gather(key = "iv", value = "x", -VisITedResources, -predicted, -residuals) %>%  # Get data into shape
   ggplot(aes(x = x, y = VisITedResources)) +  # Note use of `x` here and next line
@@ -181,60 +202,7 @@ d %>%
 ```
 
 
-```{r}
-# data wrangling 
 
-
-kaggle1 <- kaggle %>%
-mutate(Relation = as.numeric(kaggle$Relation)) %>%
-mutate(PlaceofBirth = as.numeric(kaggle$PlaceofBirth)) %>%
-mutate(Topic = as.numeric(kaggle$Topic)) %>% 
-mutate(gender = as.numeric(kaggle$gender)) %>%
-mutate(StudentAbsenceDays = as.numeric(kaggle$StudentAbsenceDays)) 
-
-numkaggle <- kaggle1 %>%
-  dplyr::select(VisITedResources, Relation, PlaceofBirth, Topic, gender, StudentAbsenceDays)
-
-numkaggle = RF_df.norm
-```
-
-```{r}
-#multpile linear regression 
-
-
-library(MASS)
-library(lmtest)
-library(nortest)
-library(car)
-library(Hmisc)
-
-
-fit <- lm(kaggle$VisITedResources ~  kaggle$raisedhands + kaggle$Class + kaggle$PlaceofBirth + kaggle$StudentAbsenceDays + kaggle$Topic)
-
-confint(fit)
-
-
-#normality check 
-ad.test(fit$residuals)
-qqPlot(fit, main = "QQ Plot")
-
-#constant variance 
-plot(kaggle$fitted,kaggle$residuals, ylab="Residuals", xlab="Fitted Values")
-abline(0,0)
-bptest(fit)
-
-#linearity 
-rcorr(as.matrix(numkaggle))
-
-#independence 
-plot(numkaggle$residuals, main="Residuals vs Order")
-acf(kaggle$residuals)
-dwtest(kaggle)
-
-#collinearity 
-vif(fit)
-
-```
 
 ```{r}
 #Logisitc Regression 
@@ -256,13 +224,192 @@ ggplot(d, aes(x = raisedhands, y = Class)) +
   guides(color = FALSE) +
   geom_point(aes(y = predicted), shape = 1) +
   theme_bw()
+```
 
+```{r}
+#neural network
+#Neural Network tools for Big Data  
+#Father = 1 | Mother = 2
+d <- kaggle1 %>%
+  select(VisITedResources, raisedhands, Class, PlaceofBirth, StudentAbsenceDays, Topic, Relation, gender)
 
+neural_df <- d %>%
+  mutate(Relation = as.numeric(d$Relation)) %>%
+  mutate(PlaceofBirth = as.numeric(d$PlaceofBirth)) %>%
+  mutate(Topic = as.numeric(d$Topic)) %>% 
+  mutate(gender = as.numeric(d$gender)) %>%
+  mutate(StudentAbsenceDays = as.numeric(d$StudentAbsenceDays))
 
+#Normalize Data
+norm.fun = function(x){ 
+  (x - min(x))/(max(x) - min(x)) 
+}
+neural_df.norm = apply(neural_df, 2, norm.fun)
+
+#Sacling Data:
+neural_df.scaled = scale(neural_df)
+
+nn_scale =neuralnet(VisITedResources ~ raisedhands + PlaceofBirth + StudentAbsenceDays + Topic + Relation + gender, data = neural_df.scaled  , hidden=3,act.fct = "logistic", linear.output = FALSE)
+
+plot(nn_scale)
+
+#training set- on normalized data 
+set.seed(7736)
+len <- nrow(neural_df.norm)
+testindices <- sample(len, round(len/4))
+train_data <- neural_df.norm[-testindices,]
+test_data <- neural_df.norm[testindices,]
+
+#Fit NN on normalized training dat
+nn=neuralnet(VisITedResources ~ raisedhands + PlaceofBirth + StudentAbsenceDays + Topic + Relation + gender, data = train_data , hidden=3,act.fct = "logistic", linear.output = FALSE)
+
+plot(nn)
+
+#predict test results
+Predict=compute(nn,test_data)
+Predict$net.result
+
+# Converting probabilities into binary classes setting threshold level 0.5
+#1 being used more likely to use resources, 0 being not
+prob <- Predict$net.result
+pred <- ifelse(prob>0.5, 1, 0)
+pred
+sum(pred == 1)
+cat("The proportion of students that were likely to take advantage of resources are:", round(sum(pred == 1)/nrow(pred) *100,2),"%")
+
+#Show predictions being made
+plot(pred,test_data[,1],
+      xlab="predicted",ylab="actual")
+abline(a=0,b=1, col = "blue")
+abline(h=0.5, col = 'red')
+
+test_data$pred <- pred
+
+#Compare to grade received in class
+used_resour<- which(pred == 1)
+resc_df <- test_data[used_resour,]
+new_df <- as.d0..0ata.frame(resc_df)
+mean(resc_df[,1])
+```
+
+```{r}
+#Compare Students that Utilized the resources a lot with all other students 
+
+plot(new_df$raisedhands,new_df$VisITedResources,
+      xlab="hands",ylab="Resources", main = "Hands Vs Resources")
+abline(a=0,b=1, col = "blue")
+abline(h=0.5 , col = "red")
+
+#Absent under 7 Days = 1
+plot(new_df$StudentAbsenceDays,new_df$VisITedResources,
+      xlab="Absent",ylab="Resources", main = "Absent Days (Under 7) Vs. Resources")
+abline(h=0.5 , col = "red")
+```
+
+```{r}
+# Create a Random Forest model with default parameters
+#General Purpose Data Wrangling 
+RF_df.norm <- d %>%
+  mutate(Relation = as.numeric(d$Relation)) %>%
+  mutate(PlaceofBirth = as.numeric(d$PlaceofBirth)) %>%
+  mutate(Topic = as.numeric(d$Topic)) %>% 
+  mutate(gender = as.numeric(d$gender)) %>%
+  mutate(StudentAbsenceDays = as.numeric(d$StudentAbsenceDays))
+#Normlaize Daya
+#User Defined Function
+norm.fun = function(x){ 
+  (x - min(x))/(max(x) - min(x)) 
+}
+
+RF_df.norm = apply(rf_df, 2, norm.fun)
+
+#Train/Test Data
+set.seed(7736)
+len <- nrow(RF_df.norm)
+testindices <- sample(len, round(len/4))
+train_data <- RF_df.norm[-testindices,]
+test_data <- RF_df.norm[testindices,]
+
+#Random Forest
+rand_forest<- randomForest(VisITedResources ~ ., data = train_data, importance = TRUE)
+
+rand_forest
+
+# Fine tuning parameters of Random Forest model
+rand_forst2 <- randomForest(VisITedResources ~ ., data = train_data, ntree = 500, mtry = 6, importance = TRUE)
+rand_forst2
+
+# Predicting on train set
+predTrain <- predict(rand_forst2, train_data, type = "class")
+# Checking classification accuracy
+table(predTrain, train_data[,1]) 
+
+predValid <- predict(rand_forst2, test_data, type = "class")
+mean(predValid == test_data[1,])                    
 
 ```
 
+```{r}
+#Unsupervised Clustering Algo 
+#K-means clustering 
 
+
+# 'aggr' plots the amount of missing/imputed values in each column
+aggr(d)
+
+set.seed(20)
+clusters <- kmeans(d[,1:3], 3)
+
+clusters$cluster <- as.factor(clusters$cluster)
+ggplot(d, aes(VisITedResources, raisedhands, color = clusters$cluster)) + geom_point()
+
+new_d <- d %>%
+  mutate(StudentAbsenceDays = as.numeric(d$StudentAbsenceDays)) %>%
+  select(VisITedResources, raisedhands, StudentAbsenceDays, Class)
+
+mydata <- scale(new_d) # standardize variables
+# Determine number of clusters
+wss <- (nrow(mydata)-1)*sum(apply(mydata,2,var))
+#for loop 
+#Elbow Method 
+for (i in 2:15) wss[i] <- sum(kmeans(mydata, 
+   centers=i)$withinss)
+plot(1:15, wss, type="b", xlab="Number of Clusters",
+  ylab="Within groups sum of squares")
+
+
+# K-Means Cluster Analysis
+fit <- kmeans(mydata, 4) # 5 cluster solution
+# get cluster means 
+aggregate(mydata,by=list(fit$cluster),FUN=mean)
+# append cluster assignment
+mydata <- data.frame(mydata, fit$cluster)
+
+
+# Ward Hierarchical Clustering
+dat <- dist(mydata, method = "euclidean") # distance matrix
+fit <- hclust(dat, method="ward") 
+plot(fit) # display dendogram
+groups <- cutree(fit, k=4) # cut tree into 5 clusters
+# draw dendogram with red borders around the 5 clusters 
+rect.hclust(fit, k=4, border="red")
+
+fit <- pvclust(mydata, method.hclust="ward",
+   method.dist="euclidean")
+plot(fit) # dendogram with p values
+# add rectangles around groups highly supported by the data
+pvrect(fit, alpha=.95)
+
+
+# K-Means Clustering with 4 clusters
+fit <- kmeans(mydata, 4)
+
+# Cluster Plot against 1st 2 principal components
+
+# vary parameters for most readable graph
+clusplot(mydata, fit$cluster, color=TRUE, shade=TRUE, 
+   labels=2, lines=0)
+```
 
 
 
