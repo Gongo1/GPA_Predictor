@@ -180,6 +180,31 @@ d %>%
   theme_bw()
 ```
 
+```{r}
+#multpile linear regression 
+
+
+library(MASS)
+library(lmtest)
+library(nortest)
+library(car)
+library(Hmisc)
+
+
+fit <- lm(kaggle$VisITedResources ~  kaggle$raisedhands + kaggle$Class + kaggle$PlaceofBirth + kaggle$StudentAbsenceDays + kaggle$Topic)
+
+confint(fit)
+
+qqPlot(fit, main="QQ Plot")
+
+ad.test(fit$residuals)
+
+plot(kaggle$fitted,kaggle$residuals, ylab="Residuals", xlab="Fitted Values")
+abline(0,0)
+bptest(fit)
+
+
+```
 
 ```{r}
 #Logisitc Regression 
