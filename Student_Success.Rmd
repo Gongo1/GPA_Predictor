@@ -1,6 +1,8 @@
 ---
 title: "New_Trial"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 # Front matter
 ```{r, echo=FALSE}
@@ -37,6 +39,7 @@ names(kaggle)
 ```
 
 The overarching goal is to quantify a students success based on their participation in school. We define success based on a studetns ability to have High Parent School Satisfaction Rates & Receiving Medium-High Grades. We define participation as: Accessing School Resources, Participating in Class (Raising Hands & Answering Questions) and Not Being Absent too many times. 
+The following graphs show the realtionships between different variables in our dataset. 
 
 Grades are separated from Low(0-69) Middle (70,89) and High (90-100)
 
@@ -44,30 +47,22 @@ Grades are separated from Low(0-69) Middle (70,89) and High (90-100)
 #Raising Hands 
 #Are student using their resources provided??? And how does it affect their grades????
 #Are student that use resources often times better prepared
-summary(kaggle)
 
-#Students and Raised Hands 
-ggplot(data = kaggle, aes(x = raisedhands)) + geom_histogram(color = "black") +
-  scale_x_continuous(breaks = seq(0,100,5)) + 
-  labs(x = "Raised Hands", y = "Student Count")
-
-#Raising Hands By Nationality 
-ggplot(data = kaggle, aes(x = PlaceofBirth)) + geom_bar(aes(fill = NationalITy)) + 
-  labs(x = "Birth Place", y = "Student Count") + coord_flip()
-
- 
 #box plot 
 #Comparre Raising Hands with Gender
 ggplot(data = kaggle, aes(x = gender, y = raisedhands)) + geom_boxplot()
 #Resources With Gender
 ggplot(data = kaggle, aes(x = gender, y = VisITedResources)) + geom_boxplot()
-#Interesting 
+
 #Higher Grades Associated with Students that raise hands more
 ggplot(data = kaggle, aes(x = Class, y = raisedhands)) + geom_boxplot()
 #Higher Grades Associated with Students that visit more resources
 ggplot(data = kaggle, aes(x = Class, y = VisITedResources)) + geom_boxplot()
+
 #With mum as the relation more students paticipate
 ggplot(data = kaggle, aes(x = Relation, y = raisedhands)) + geom_boxplot()
+
+
 #Students with better satisfaction raise their hands mroe
 ggplot(data = kaggle, aes(x = ParentschoolSatisfaction, y = raisedhands)) + geom_boxplot()
 #Students with better satisfaction use more resources
@@ -77,17 +72,8 @@ ggplot(data = kaggle, aes(x = ParentschoolSatisfaction, y = VisITedResources)) +
 #density plots
 #Raising Hands Based on Topic
 ggplot(data = kaggle, aes(x = raisedhands, color = Topic)) + geom_density()
-
-#Higher Grades more Raising Hands
-ggplot(data = kaggle, aes(x = raisedhands, color = Class)) + geom_density()
-
-#Interesting
-#Higher grade visited more resources 
-ggplot(data = kaggle, aes(x = VisITedResources, color = Class)) + geom_density()
-
-ggplot(data = kaggle, aes(x = VisITedResources, color = ParentschoolSatisfaction)) + geom_density()
-
 ```
+I find it interesting how there is such a disparity between female and male participation and how female figureheads on average lead to more particiaption among students in the classroom. I find evidence to suggest that there is a positve relationship between a students success in school and their ability to participate in class. Our next steps will be do quantify this relationship using different models such as simple linear regressoin, multi-linear regression, neural networks & k-means clustering. 
 
 
 ```{r}
@@ -167,6 +153,8 @@ ggplot(kaggle1, aes(x = raisedhands, y = VisITedResources)) +
   theme_bw()
 ```
 
+58.6 percent of variation in the class grade is explained by the multiple linear regression with the predictors.
+We looked at four factors to determine if the predictors were fit for multiple linear regression. The graphs will explain, linearity, independence, normality and equal variance among residuals. The first graph shows the linearity of the predictors, with some outliers. The QQ plot shows that the predictors are normal. The scale-location plot is showing the equal variance among residuals, and the spread is equal across the graph, making them have equal variance. The residuals vs leverage plot helps us find influential cases if any at all, which they are all around the cooks distance line, so no influential cases. To check for collinearity in the predictors, the variance inflation factor was used. These numbers showed below 10 therefore no predictors have collinearity.
 ```{r}
 #Multiple Linear Regression
 d <- kaggle1 %>%
@@ -201,30 +189,7 @@ d %>%
   theme_bw()
 ```
 
-
-
-
-```{r}
-#Logisitc Regression 
-#0 = fail | 1 = pass
-d <- kaggle1 %>%
-  mutate(Class = ifelse(Class == 2 ,0,1))
-
-fit <- glm(d$Class ~  d$VisITedResources + d$raisedhands + d$StudentAbsenceDays , family = binomial())
-
-# Step 2: Obtain predicted and residuals
-d$predicted <- predict(fit, type="response")
-d$residuals <- residuals(fit, type = "response")
-
-# Steps 3 and 4: plot the results
-ggplot(d, aes(x = raisedhands, y = Class)) +
-  geom_segment(aes(xend = raisedhands, yend = predicted), alpha = .2) +
-  geom_point(aes(color = residuals)) +
-  scale_color_gradient2(low = "blue", mid = "white", high = "red") +
-  guides(color = FALSE) +
-  geom_point(aes(y = predicted), shape = 1) +
-  theme_bw()
-```
+We use an Artificial Neural Netwrok with three hidden layers. To properly use the model we need to convert all of our factor variables into numerical variables so we beign with some data wrangling and mutate all factor variables. We then normalize the data so we can use it properly and we created a user defined function that normalizes our data. We then split the data into training/testing data (75-25 split). I give a visualization of the NN and make predictions of how likely a student is to utilize school resources and from this data set it is about 60% of student utilize their resources. The model has an accuracy of 79.85%. 
 
 ```{r}
 #neural network
@@ -245,13 +210,6 @@ norm.fun = function(x){
   (x - min(x))/(max(x) - min(x)) 
 }
 neural_df.norm = apply(neural_df, 2, norm.fun)
-
-#Sacling Data:
-neural_df.scaled = scale(neural_df)
-
-nn_scale =neuralnet(VisITedResources ~ raisedhands + PlaceofBirth + StudentAbsenceDays + Topic + Relation + gender, data = neural_df.scaled  , hidden=3,act.fct = "logistic", linear.output = FALSE)
-
-plot(nn_scale)
 
 #training set- on normalized data 
 set.seed(7736)
@@ -287,24 +245,12 @@ test_data$pred <- pred
 
 #Compare to grade received in class
 used_resour<- which(pred == 1)
-resc_df <- test_data[used_resour,]
-new_df <- as.d0..0ata.frame(resc_df)
-mean(resc_df[,1])
+test_data <- unlist(test_data)
+resc_df <- test_data[used_resour]
+new_df <- as.data.frame(resc_df)
+mean(resc_df)
 ```
 
-```{r}
-#Compare Students that Utilized the resources a lot with all other students 
-
-plot(new_df$raisedhands,new_df$VisITedResources,
-      xlab="hands",ylab="Resources", main = "Hands Vs Resources")
-abline(a=0,b=1, col = "blue")
-abline(h=0.5 , col = "red")
-
-#Absent under 7 Days = 1
-plot(new_df$StudentAbsenceDays,new_df$VisITedResources,
-      xlab="Absent",ylab="Resources", main = "Absent Days (Under 7) Vs. Resources")
-abline(h=0.5 , col = "red")
-```
 
 ```{r}
 # Create a Random Forest model with default parameters
@@ -321,7 +267,7 @@ norm.fun = function(x){
   (x - min(x))/(max(x) - min(x)) 
 }
 
-RF_df.norm = apply(rf_df, 2, norm.fun)
+RF_df.norm = apply(RF_df.norm, 2, norm.fun)
 
 #Train/Test Data
 set.seed(7736)
@@ -342,18 +288,18 @@ rand_forst2
 # Predicting on train set
 predTrain <- predict(rand_forst2, train_data, type = "class")
 # Checking classification accuracy
-table(predTrain, train_data[,1]) 
+#table(predTrain, train_data[,1]) 
 
 predValid <- predict(rand_forst2, test_data, type = "class")
 mean(predValid == test_data[1,])                    
 
 ```
 
+Here we use an unsupervised approach of K-means clustering. We cluster based on students that Visit Resources into 3 different clusters.
+By using the k means elbow method we determine that we should use a K value of 4, so we have 4 clusters.
 ```{r}
 #Unsupervised Clustering Algo 
 #K-means clustering 
-
-
 # 'aggr' plots the amount of missing/imputed values in each column
 aggr(d)
 
@@ -379,7 +325,7 @@ plot(1:15, wss, type="b", xlab="Number of Clusters",
 
 
 # K-Means Cluster Analysis
-fit <- kmeans(mydata, 4) # 5 cluster solution
+fit <- kmeans(mydata, 4) # 4 cluster solution
 # get cluster means 
 aggregate(mydata,by=list(fit$cluster),FUN=mean)
 # append cluster assignment
@@ -390,8 +336,8 @@ mydata <- data.frame(mydata, fit$cluster)
 dat <- dist(mydata, method = "euclidean") # distance matrix
 fit <- hclust(dat, method="ward") 
 plot(fit) # display dendogram
-groups <- cutree(fit, k=4) # cut tree into 5 clusters
-# draw dendogram with red borders around the 5 clusters 
+groups <- cutree(fit, k=4) # cut tree into 4 clusters
+# draw dendogram with red borders around the 4 clusters 
 rect.hclust(fit, k=4, border="red")
 
 fit <- pvclust(mydata, method.hclust="ward",
@@ -411,6 +357,8 @@ clusplot(mydata, fit$cluster, color=TRUE, shade=TRUE,
    labels=2, lines=0)
 ```
 
+##Conclusion
 
+I am confident that from my findings it is important to stress to students that availability of resourcess at their disposal. It is apparent that there is some kind of correlation between being an involved student and succeeding in school. Of course this does not apply to all students and should be taken with a grain of salt; nonetheless, I feel that if more studetns were to be involved the university would see an uptick in average GPA across the board. My next step was to use Penn State Students Degree Audits to cross-reference it with my models to provide reccomendations to get more involved and based on these reccomendations offer a prediction interval for their forecasted new GPA. I faced numerous problems with using DegreeAudit Data like ethical concerns, but mostly the fact it was a heavily datapoor set and my accuracy scores were in the range of 10%:20%. I think it would be very useful to offer students a tool that would show them how better they could potentially perform if they were to utilize these resources. Resources would include Office Hours, Campus Tutoring, Meeting with TA’s. 
 
 
